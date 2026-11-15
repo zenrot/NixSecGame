@@ -31,10 +31,10 @@ nix --extra-experimental-features "nix-command flakes" build \
   .#nixosConfigurations.utm.config.system.build.toplevel \
   --override-input machine path:/etc/nixos/nixsecgame-machine \
   --no-write-lock-file
-sudo nixos-rebuild switch --store-path "$(readlink -f result)"
+sudo nixos-rebuild switch --no-reexec --store-path "$(readlink -f result)"
 ```
 
-Для отката выполните `sudo nixos-rebuild switch --rollback` или выберите предыдущую генерацию в меню UEFI-загрузчика.
+Для отката выполните `sudo nixos-rebuild switch --no-reexec --rollback` или выберите предыдущую генерацию в меню UEFI-загрузчика.
 
 ## Обмен изменениями
 
