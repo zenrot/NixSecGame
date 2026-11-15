@@ -7,6 +7,38 @@
     "sha256": "d0bac1bd61747a67e885fa44b78c78887bf2b15d3dfa2790c483fad651078818",
     "runner": "scummvm",
     "target": "sky",
-    "required_files": ["sky.dnr", "sky.dsk"]
+    "required_files": [
+      "sky.dnr",
+      "sky.dsk"
+    ]
+  },
+  "flight-of-the-amazon-queen": {
+    "title": "Flight of the Amazon Queen",
+    "version": "freeware-floppy",
+    "source_id": "scummvm-queen-freeware",
+    "url": "https://downloads.scummvm.org/frs/extras/Flight%20of%20the%20Amazon%20Queen/FOTAQ_Floppy.zip",
+    "sha256": "2e59de85f708cdb32bf85c85b394ac091c05f7647e856b71f5b3ae73fde761e0",
+    "runner": "scummvm",
+    "target": "queen:queen",
+    "data_dir": "FOTAQ_Floppy",
+    "required_files": [
+      "queen.1"
+    ]
+  },
+  "lure-of-the-temptress": {
+    "title": "Lure of the Temptress",
+    "version": "freeware-en-1.1",
+    "source_id": "scummvm-lure-freeware",
+    "url": "https://downloads.scummvm.org/frs/extras/Lure%20of%20the%20Temptress/lure-1.1.zip",
+    "sha256": "f3178245a1483da1168c3a11e70b65d33c389f1f5df63d4f3a356886c1890108",
+    "runner": "scummvm",
+    "target": "lure:lure",
+    "data_dir": "lure",
+    "required_files": [
+      "Disk1.vga",
+      "Disk2.vga",
+      "Disk3.vga",
+      "Disk4.vga"
+    ]
   }
 }

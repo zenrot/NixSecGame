@@ -42,17 +42,19 @@ sudo nixos-rebuild switch --no-reexec --store-path "$(readlink -f result)"
 
 Для обновления пакетов в ветке NixOS 26.05 выполните `nix flake update nixpkgs`, соберите конфигурацию и добавьте обновлённый `flake.lock` в коммит.
 
-## Установка и запуск игры
+## Установка и запуск игр
 
 После активации системы под обычным пользователем выполните:
 
 ```sh
 gameguard catalog
 gameguard install beneath-a-steel-sky
+gameguard install flight-of-the-amazon-queen
+gameguard install lure-of-the-temptress
 pegasus-fe
 ```
 
-Установщик скачивает бесплатную версию Beneath a Steel Sky с сайта ScummVM, сверяет SHA-256 и распаковывает файлы в `~/.local/share/gameguard/games/beneath-a-steel-sky/files`. После установки откройте Pegasus из меню приложений. В коллекции **GameGuard Retro** выберите **Beneath a Steel Sky** и нажмите Play. Если Pegasus был открыт перед установкой, перезапустите его для чтения метаданных. [Архив и SHA-256 ScummVM](https://www.scummvm.org/games/), [метаданные Pegasus](https://pegasus-frontend.org/docs/user-guide/meta-files/).
+Установщик скачивает бесплатные версии игр с сайта ScummVM, сверяет SHA-256 каждого архива и распаковывает файлы в `~/.local/share/gameguard/games/<id>/files`. После установки откройте Pegasus из меню приложений. В коллекции **GameGuard Retro** выберите игру и нажмите Play. Если Pegasus был открыт перед установкой, перезапустите его для чтения метаданных. [Архив и SHA-256 ScummVM](https://www.scummvm.org/games/), [метаданные Pegasus](https://pegasus-frontend.org/docs/user-guide/meta-files/).
 
 Для запуска из терминала выполните `gameguard run beneath-a-steel-sky`. Для просмотра записей установки и последнего запуска выполните `gameguard report beneath-a-steel-sky`. Журналы CLI хранятся в `~/.local/share/gameguard/reports/<id>/`. Установка использует каталог и список разрешённых загрузок из `repository/`.
 

@@ -97,7 +97,8 @@ def install_files(game, sources, stage):
     files.mkdir()
     download_archive(game, sources, archive)
     safe_extract(archive, files)
+    data_dir = files / game.get("data_dir", ".")
     for name in game["required_files"]:
-        if not (files / name).is_file():
+        if not (data_dir / name).is_file():
             raise ValueError(f"В архиве отсутствует файл {name}")
     archive.unlink()

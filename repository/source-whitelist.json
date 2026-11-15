@@ -2,5 +2,13 @@
   "scummvm-freeware": {
     "host": "downloads.scummvm.org",
     "path_prefix": "/frs/extras/Beneath a Steel Sky/"
+  },
+  "scummvm-queen-freeware": {
+    "host": "downloads.scummvm.org",
+    "path_prefix": "/frs/extras/Flight of the Amazon Queen/"
+  },
+  "scummvm-lure-freeware": {
+    "host": "downloads.scummvm.org",
+    "path_prefix": "/frs/extras/Lure of the Temptress/"
   }
 }

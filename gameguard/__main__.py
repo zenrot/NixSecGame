@@ -108,12 +108,13 @@ def launch(game, files, destination, reports):
 
     if game["runner"] != "scummvm":
         raise ValueError(f"Неподдерживаемый runner {game['runner']!r}")
-    if any(not (files / name).is_file() for name in game["required_files"]):
+    data_dir = files / game.get("data_dir", ".")
+    if any(not (data_dir / name).is_file() for name in game["required_files"]):
         raise ValueError("В установке отсутствуют игровые файлы")
 
     saves = destination / "saves"
     saves.mkdir(exist_ok=True)
-    command = ["scummvm", "--no-fullscreen", f"--path={files}", f"--savepath={saves}", game["target"]]
+    command = ["scummvm", "--no-fullscreen", f"--path={data_dir}", f"--savepath={saves}", game["target"]]
     tracer = backend("dynamic")
     trace = unavailable("dynamic")
     if tracer is None:
