@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 from shutil import which
 
-from .catalog import load_catalog, load_sources, manifest_for, read_json
+from .catalog import load_catalog, load_sources, manifest_for, read_json, write_json
 from .checks import apply_check, backend, unavailable
 from .installer import install_files
 from .pegasus import update_metadata
@@ -18,21 +18,6 @@ from .pegasus import update_metadata
 def data_home():
     path = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
     return path.resolve() / "gameguard"
-
-
-def write_json(path, result):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(
-        mode="w", encoding="utf-8", dir=path.parent, delete=False,
-    ) as output:
-        temporary = Path(output.name)
-        try:
-            json.dump(result, output, ensure_ascii=False, indent=2)
-            output.write("\n")
-            output.close()
-            temporary.replace(path)
-        finally:
-            temporary.unlink(missing_ok=True)
 
 
 def record(directory, name, status):
@@ -80,6 +65,8 @@ def install(root, catalog, game_id, game, reports):
             baseline = apply_check(
                 "static", "create_baseline", stage / "files", stage / "integrity.json",
             )
+            if baseline["status"] in {"warning", "error"}:
+                raise ValueError("Не удалось сохранить эталон целостности")
             write_json(stage / "gameguard.json", manifest)
             stage.rename(destination)
 
