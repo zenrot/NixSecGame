@@ -9,14 +9,26 @@
     };
   };
 
-  outputs = { self, nixpkgs, machine, ... }: {
-    nixosConfigurations.utm = nixpkgs.lib.nixosSystem {
+  outputs = { self, nixpkgs, machine, ... }:
+    let
       system = "aarch64-linux";
-      modules = [
-        { system.configurationRevision = self.rev or null; }
-        ./hosts/utm/configuration.nix
-        (machine + "/default.nix")
-      ];
+      pkgs = nixpkgs.legacyPackages.${system};
+      gameguard = pkgs.callPackage ./package.nix { };
+    in {
+      packages.${system}.default = gameguard;
+
+      devShells.${system}.default = pkgs.mkShell {
+        packages = with pkgs; [ python3 pegasus-frontend scummvm strace binutils pax-utils ];
+      };
+
+      nixosConfigurations.utm = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          { system.configurationRevision = self.rev or null; }
+          { environment.systemPackages = [ gameguard ]; }
+          ./hosts/utm/configuration.nix
+          (machine + "/default.nix")
+        ];
+      };
     };
-  };
 }

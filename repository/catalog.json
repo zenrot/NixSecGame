@@ -1,0 +1,12 @@
+{
+  "beneath-a-steel-sky": {
+    "title": "Beneath a Steel Sky",
+    "version": "freeware-floppy-1.3",
+    "source_id": "scummvm-freeware",
+    "url": "https://downloads.scummvm.org/frs/extras/Beneath%20a%20Steel%20Sky/BASS-Floppy-1.3.zip",
+    "sha256": "d0bac1bd61747a67e885fa44b78c78887bf2b15d3dfa2790c483fad651078818",
+    "runner": "scummvm",
+    "target": "sky",
+    "required_files": ["sky.dnr", "sky.dsk"]
+  }
+}

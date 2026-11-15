@@ -1,6 +1,6 @@
 # NixSecGame
 
-Системная конфигурация NixOS 26.05 для ARM64-виртуальной машины в UTM. `flake.lock` фиксирует ревизию Nixpkgs для сборки на другой машине.
+NixOS 26.05 для ARM64-виртуальной машины в UTM с GameGuard, Pegasus и ScummVM. `flake.lock` фиксирует ревизию Nixpkgs для сборки на другой машине.
 
 ## Подготовка ВМ
 
@@ -41,3 +41,23 @@ sudo nixos-rebuild switch --store-path "$(readlink -f result)"
 На ВМ репозиторий находится в `~/NixSecGame`. Сначала получите изменения командой `git pull --ff-only`, затем повторите сборку и активацию. Общие параметры находятся в `hosts/utm/configuration.nix`. Их можно менять в своей копии репозитория и отправлять на GitHub через коммит или pull request.
 
 Для обновления пакетов в ветке NixOS 26.05 выполните `nix flake update nixpkgs`, соберите конфигурацию и добавьте обновлённый `flake.lock` в коммит.
+
+## Установка и запуск игры
+
+После активации системы под обычным пользователем выполните:
+
+```sh
+gameguard catalog
+gameguard install beneath-a-steel-sky
+pegasus-fe
+```
+
+Установщик скачивает бесплатную версию Beneath a Steel Sky с сайта ScummVM, сверяет SHA-256 и распаковывает файлы в `~/.local/share/gameguard/games/beneath-a-steel-sky/files`. После установки откройте Pegasus из меню приложений. В коллекции **GameGuard Retro** выберите **Beneath a Steel Sky** и нажмите Play. Если Pegasus был открыт перед установкой, перезапустите его для чтения метаданных. [Архив и SHA-256 ScummVM](https://www.scummvm.org/games/), [метаданные Pegasus](https://pegasus-frontend.org/docs/user-guide/meta-files/).
+
+Для запуска из терминала выполните `gameguard run beneath-a-steel-sky`. Для просмотра записей установки и последнего запуска выполните `gameguard report beneath-a-steel-sky`. Журналы CLI хранятся в `~/.local/share/gameguard/reports/<id>/`. Установка использует каталог и список разрешённых загрузок из `repository/`.
+
+## Разработка
+
+Запустите `nix develop` на ARM64 и выполните `python3 -m unittest discover -s tests`. Команда `nix build` собирает пакет GameGuard и запускает эти тесты.
+
+Вклад участника №1 включает конфигурацию NixOS, каталог, установщик с проверкой источника и SHA-256 архива, CLI и Pegasus. Команды `verify` и `sbom` возвращают `not_applicable` до подключения статического модуля. Поля отчёта об установке и запуске показывают тот же статус для отсутствующего модуля трассировки. [Интерфейсы модулей](docs/gameguard-modules.md).

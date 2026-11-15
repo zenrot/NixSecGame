@@ -50,7 +50,15 @@ in
   programs.firefox.enable = true;
   nixpkgs.config.allowUnfree = true;
 
-  environment.systemPackages = [ pkgs.git ];
+  environment.systemPackages = with pkgs; [
+    git
+    pegasus-frontend
+    scummvm
+    python3
+    strace
+    binutils
+    pax-utils
+  ];
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   # Keep the version used for the original installation.
