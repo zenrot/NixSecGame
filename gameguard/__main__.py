@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 from shutil import which
 
-from .catalog import REPOSITORY, load_catalog, load_sources, manifest_for, read_json
+from .catalog import load_catalog, load_sources, manifest_for, read_json
 from .checks import apply_check, backend, unavailable
 from .installer import install_files
 from .pegasus import update_metadata
@@ -119,7 +119,7 @@ def launch(game, files, destination, reports):
     if tracer is None:
         exit_code = subprocess.run(command, check=False).returncode
     else:
-        trace = tracer.trace_network(command, REPOSITORY / "network-policy.json", reports)
+        trace = tracer.trace_network(command, reports)
         exit_code = trace["exit_code"]
     result = record(reports, "run", {
         "status": "ok" if exit_code == 0 else "error",
