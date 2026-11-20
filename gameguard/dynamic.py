@@ -129,7 +129,7 @@ def summarize_install(calls, exits, install_dir):
         if name in SPAWN_CALLS and call["ok"]:
             spawned += 1
         if name in {"execve", "execveat"} and call["ok"]:
-            strings = _strings(call["args"], 3)
+            strings = _strings(call["args"], 12)
             children.append({
                 "pid": call["pid"],
                 "path": strings[0] if strings else None,
