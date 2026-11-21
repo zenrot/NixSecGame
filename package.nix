@@ -1,5 +1,8 @@
 { lib, stdenvNoCC, makeWrapper, python3, scummvm, strace, binutils, pax-utils }:
 
+let
+  python = python3.withPackages (ps: [ ps.cyclonedx-python-lib ps.jsonschema ]);
+in
 stdenvNoCC.mkDerivation {
   pname = "gameguard";
   version = "0.1.0";
@@ -9,7 +12,7 @@ stdenvNoCC.mkDerivation {
     fileset = lib.fileset.unions [ ./gameguard ./repository ./tests ];
   };
 
-  nativeBuildInputs = [ makeWrapper python3 ];
+  nativeBuildInputs = [ makeWrapper python ];
   dontBuild = true;
   doCheck = true;
 
@@ -23,7 +26,7 @@ stdenvNoCC.mkDerivation {
     runHook preInstall
     mkdir -p "$out/lib" "$out/bin"
     cp -r gameguard repository "$out/lib/"
-    makeWrapper "${python3}/bin/python3" "$out/bin/gameguard" \
+    makeWrapper "${python}/bin/python3" "$out/bin/gameguard" \
       --set PYTHONPATH "$out/lib" \
       --add-flags "-m gameguard" \
       --prefix PATH : "${lib.makeBinPath [ scummvm strace binutils pax-utils ]}"

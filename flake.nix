@@ -18,7 +18,7 @@
       packages.${system}.default = gameguard;
 
       devShells.${system}.default = pkgs.mkShell {
-        packages = with pkgs; [ python3 pegasus-frontend scummvm strace binutils pax-utils ];
+        packages = with pkgs; [ (python3.withPackages (ps: [ ps.cyclonedx-python-lib ps.jsonschema ])) pegasus-frontend scummvm strace binutils pax-utils ];
       };
 
       nixosConfigurations.utm = nixpkgs.lib.nixosSystem {

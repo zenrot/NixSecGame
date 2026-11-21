@@ -1,3 +1,4 @@
+import tempfile
 import json
 from pathlib import Path
 
@@ -26,3 +27,18 @@ def manifest_for(game_id, game):
         "source_id": game["source_id"],
         "archive_sha256": game["sha256"],
     }
+
+
+def write_json(path, result):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=path.parent, delete=False,
+    ) as output:
+        temporary = Path(output.name)
+        try:
+            json.dump(result, output, ensure_ascii=False, indent=2)
+            output.write("\n")
+            output.close()
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
