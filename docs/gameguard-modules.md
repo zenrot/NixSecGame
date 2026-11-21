@@ -4,8 +4,9 @@ CLI загружает модули `gameguard.static` и `gameguard.dynamic`, �
 
 ## Статический анализ
 
-- `create_baseline(game_dir, baseline_path)` создаёт эталон при установке. CLI переносит проверяемый каталог `files/` и соседний `integrity.json` из временной папки в каталог установки. Сохраняйте в эталоне пути относительно `game_dir`.
-- `scan_integrity(game_dir, baseline_path)` сверяет файлы с эталоном. GameGuard останавливает запуск, если модуль возвращает `warning` или `error`. Для игр, установленных до подключения модуля, обработайте отсутствие эталона.
+- `create_baseline(game_dir, baseline_path)` создаёт эталон из архива при сборке NixOS. Сборщик проверяет SHA-256 архива и помещает результат в Nix Store. Пути в эталоне отсчитываются от `game_dir`.
+- `trusted_baseline(game)` возвращает системный путь `/etc/gameguard/baselines/<archive-sha256>.json`. CLI проверяет по нему ресурсы при установке, повторной установке, проверке и запуске. Пользовательские эталоны из прежних установок игнорируются.
+- `scan_integrity(game_dir, baseline_path)` сверяет файлы с эталоном. GameGuard останавливает запуск, если модуль возвращает `warning` или `error`. Прежние установки сверяются с системным эталоном из проверенного архива.
 - `make_sbom(game_dir, runner_path, output_path)` сохраняет CycloneDX JSON. Для Beneath a Steel Sky `runner_path` указывает на команду ScummVM из Nixpkgs. При необходимости разберите её обёртку и анализируйте исполняемый ELF движка. Игровые файлы записывайте как ресурсы.
 
 ## Динамический анализ
@@ -58,7 +59,7 @@ echo "run exit: $?"
 }
 ```
 
-Элементы списка `allowed` это IPv4/IPv6-адреса или сети в формате CIDR. Адреса вида `::ffff:a.b.c.d` сравниваются как IPv4. Если файла нет, разрешён только loopback. Функция `trace_network` принимает необязательный аргумент `policy_path` для другой политики.
+Элементы списка `allowed` это IPv4/IPv6-адреса или сети в формате CIDR. Адреса вида `::ffff:a.b.c.d` сравниваются как IPv4. Если файла нет, разрешён только loopback. Функция `trace_network` принимает необязательный аргумент `policy_path` для дополнительного анализа. Ядро применяет политику из активной системной сборки. Пользовательский `policy_path` не меняет фильтр ядра.
 
 ### Результат `trace_install`
 
@@ -74,7 +75,8 @@ echo "run exit: $?"
 ### Результат `trace_network`
 
 - `exit_code`, `trace_file`, `summary_file`. При ненулевом коде выхода добавляется `stderr_tail`.
-- `status`: `ok` или `warning`, если есть соединение вне политики.
+- `status`: `ok`, `warning` при попытке соединения вне политики или `error` при ошибке запуска/завершения процесса.
+- `enforcement`: `systemd-cgroup-bpf`, `enforced_networks`: разрешённые сети из активной NixOS-конфигурации.
 - `connections`: исходящие вызовы `connect`, `sendto`, `sendmsg`, `sendmmsg` к IP-адресам, сгруппированные по одинаковым параметрам. Поля: `syscall`, `ip`, `port`, `result`, `errno`, `allowed`, `count`.
 - `result`: `success`, `failed` или `in_progress`. Итог неблокирующего `connect` берётся из последующего `getsockopt(SO_ERROR)`. Если его нет в трассе, остаётся `in_progress`.
 - `violations`: подмножество `connections` с `allowed: false`.
@@ -82,4 +84,4 @@ echo "run exit: $?"
 - `unix_socket_calls`: число вызовов к unix-сокетам. Они не сверяются с политикой.
 - `syscalls`: число сетевых вызовов по именам, `allowed_networks`: действующая политика.
 
-`status: warning` не останавливает запуск игры: `exit_code` в результате остаётся кодом завершения процесса.
+GameGuard запускает `strace` и игру через `gameguard-network` в системной cgroup с IP-фильтром. Фильтр блокирует запрещённые IPv4/IPv6-пакеты для TCP/UDP, а трассировщик записывает попытки обращений. `exit_code` содержит код завершения процесса.

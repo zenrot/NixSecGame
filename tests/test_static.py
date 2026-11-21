@@ -35,7 +35,9 @@ class StaticTests(unittest.TestCase):
         self.assertEqual(result["removed"], ["sky.dsk"])
         self.assertEqual(result["changed"], ["sky.dnr"])
 
-        with patch("gameguard.__main__.subprocess.run") as start:
+        with patch("gameguard.__main__.subprocess.run") as start, patch(
+            "gameguard.__main__.trusted_baseline", return_value=self.baseline,
+        ):
             with self.assertRaisesRegex(ValueError, "GameGuard обнаружил отклонения"):
                 launch({}, self.files, self.root, self.root / "reports")
             start.assert_not_called()

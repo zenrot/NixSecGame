@@ -9,6 +9,7 @@ from collections import Counter
 from pathlib import Path
 
 from .catalog import REPOSITORY, read_json
+from .network import enforced_command
 
 POLICY_PATH = REPOSITORY / "network-policy.json"
 DEFAULT_ALLOWED = ("127.0.0.0/8", "::1/128")
@@ -281,7 +282,7 @@ def summarize_network(calls, networks):
     }
 
 
-def _run_strace(argv, report_dir, name, trace_filter):
+def _run_strace(argv, report_dir, name, trace_filter, enforce=False):
     report_dir = Path(report_dir)
     report_dir.mkdir(parents=True, exist_ok=True)
     trace_file = report_dir / f"{name}.strace"
@@ -291,9 +292,14 @@ def _run_strace(argv, report_dir, name, trace_filter):
     if strace is None:
         return None, trace_file, "strace не найден в PATH", 127
     command = [strace, "-f", "-ttt", "-s", "256", "-o", str(trace_file), "-e", trace_filter, "--", *argv]
+    trace_file.unlink(missing_ok=True)
+    if enforce:
+        command = enforced_command(command)
     with stderr_file.open("wb") as stderr:
         code = subprocess.run(command, stderr=stderr, check=False).returncode
     tail = stderr_file.read_text(encoding="utf-8", errors="replace")[-2000:]
+    if enforce and not trace_file.is_file():
+        return None, trace_file, tail or "Не удалось применить сетевую политику", code
     text = trace_file.read_text(encoding="utf-8", errors="replace") if trace_file.exists() else ""
     return text, trace_file, tail, code
 
@@ -319,13 +325,16 @@ def trace_install(argv, install_dir, report_dir):
 
 
 def trace_network(argv, report_dir, policy_path=None):
-    text, trace_file, stderr, code = _run_strace(argv, report_dir, "network", NETWORK_FILTER)
+    text, trace_file, stderr, code = _run_strace(argv, report_dir, "network", NETWORK_FILTER, enforce=True)
     result = {"exit_code": code, "trace_file": str(trace_file)}
     if text is None:
         return {**result, "status": "error", "reason": stderr}
     calls, _ = parse_trace(text)
     result.update(summarize_network(calls, load_policy(policy_path)))
     if code != 0:
+        result["status"] = "error"
         result["stderr_tail"] = stderr
+    result["enforcement"] = "systemd-cgroup-bpf"
+    result["enforced_networks"] = read_json(Path("/etc/gameguard/network-policy.json"))["allowed"]
     result["summary_file"] = str(_save(report_dir, "network", result))
     return result

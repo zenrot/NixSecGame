@@ -36,6 +36,12 @@ def snapshot(game_dir):
     return files
 
 
+
+def trusted_baseline(game):
+    # The system generation supplies these manifests from hash-checked archives.
+    return Path("/etc/gameguard/baselines") / f"{game['sha256']}.json"
+
+
 def create_baseline(game_dir, baseline_path):
     files = snapshot(game_dir)
     if None in files.values():
@@ -66,7 +72,7 @@ def scan_integrity(game_dir, baseline_path):
                 raise
             actual = {}
     except FileNotFoundError:
-        return {"status": "error", "reason": "Нет эталона целостности. Переместите старую установку и установите игру заново."}
+        return {"status": "error", "reason": "Нет эталона целостности в активной конфигурации NixOS. Обновите систему."}
     except (ValueError, OSError) as error:
         return {"status": "error", "reason": str(error)}
 

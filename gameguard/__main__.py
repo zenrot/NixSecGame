@@ -13,6 +13,7 @@ from .catalog import load_catalog, load_sources, manifest_for, read_json, write_
 from .checks import apply_check, backend, unavailable
 from .installer import install_files
 from .pegasus import update_metadata
+from .static import scan_integrity, trusted_baseline
 
 
 def data_home():
@@ -43,7 +44,10 @@ def install(root, catalog, game_id, game, reports):
     with (root / "install.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if destination.exists():
-            installed_game(destination, manifest)
+            files = installed_game(destination, manifest)
+            verification = scan_integrity(files, trusted_baseline(game))
+            if verification["status"] != "ok":
+                raise ValueError("Установка отличается от защищённого эталона. Проверьте gameguard verify")
             metadata = update_metadata(games, catalog)
             return {"status": "ok", "reused": True, "pegasus": str(metadata)}
 
@@ -62,9 +66,7 @@ def install(root, catalog, game_id, game, reports):
                     record(reports, "install-trace", trace)
                     raise RuntimeError("Установщик завершился с ошибкой")
 
-            baseline = apply_check(
-                "static", "create_baseline", stage / "files", stage / "integrity.json",
-            )
+            baseline = scan_integrity(stage / "files", trusted_baseline(game))
             if baseline["status"] in {"warning", "error"}:
                 raise ValueError("Не удалось сохранить эталон целостности")
             write_json(stage / "gameguard.json", manifest)
@@ -86,9 +88,7 @@ def install(root, catalog, game_id, game, reports):
 
 
 def launch(game, files, destination, reports):
-    verification = apply_check(
-        "static", "scan_integrity", files, destination / "integrity.json",
-    )
+    verification = scan_integrity(files, trusted_baseline(game))
     record(reports, "verify", verification)
     if verification["status"] in {"warning", "error"}:
         raise ValueError("GameGuard обнаружил отклонения. Проверьте отчёт verify")
@@ -144,7 +144,7 @@ def handle(args, catalog, root):
     if args.action == "run":
         return launch(game, files, destination, reports)
     if args.action == "verify":
-        result = apply_check("static", "scan_integrity", files, destination / "integrity.json")
+        result = scan_integrity(files, trusted_baseline(game))
         return record(reports, "verify", result), int(result["status"] != "ok")
     if args.action == "sbom":
         runner = which("scummvm")
