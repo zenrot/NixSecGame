@@ -109,7 +109,6 @@ def helper_main():
         uid = int(os.environ["SUDO_UID"])
         environment = json.loads(sys.argv[1])
         command = service_command(uid, environment, sys.argv[2:])
-        # Never pass the caller's environment to a privileged systemd client.
         return subprocess.run(
             command, env={"PATH": "/run/current-system/sw/bin", "LANG": "C.UTF-8"},
             check=False,
