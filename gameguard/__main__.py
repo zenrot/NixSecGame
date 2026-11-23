@@ -7,7 +7,7 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
-from shutil import which
+from shutil import rmtree, which
 
 from .catalog import load_catalog, load_sources, manifest_for, read_json, write_json
 from .checks import apply_check, backend, unavailable
@@ -43,13 +43,22 @@ def install(root, catalog, game_id, game, reports):
 
     with (root / "install.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        if destination.exists():
+        if games.is_symlink() or destination.is_symlink():
+            raise ValueError("Каталог установки не должен быть символической ссылкой")
+        if destination.exists() and (destination / "gameguard.json").is_file():
             files = installed_game(destination, manifest)
             verification = scan_integrity(files, trusted_baseline(game))
             if verification["status"] != "ok":
                 raise ValueError("Установка отличается от защищённого эталона. Проверьте gameguard verify")
             metadata = update_metadata(games, catalog)
             return {"status": "ok", "reused": True, "pegasus": str(metadata)}
+
+        if destination.exists():
+            if not destination.is_dir() or any(path.name != "saves" for path in destination.iterdir()):
+                raise ValueError("Незавершённая установка. Сначала выполните gameguard uninstall")
+            saves = destination / "saves"
+            if saves.is_symlink() or (saves.exists() and not saves.is_dir()):
+                raise ValueError("Каталог сохранений должен быть обычным каталогом")
 
         with tempfile.TemporaryDirectory(prefix=".install-", dir=games) as temporary:
             stage = Path(temporary)
@@ -70,7 +79,15 @@ def install(root, catalog, game_id, game, reports):
             if baseline["status"] in {"warning", "error"}:
                 raise ValueError("Не удалось сохранить эталон целостности")
             write_json(stage / "gameguard.json", manifest)
-            stage.rename(destination)
+            if destination.exists():
+                (stage / "files").rename(destination / "files")
+                try:
+                    (stage / "gameguard.json").rename(destination / "gameguard.json")
+                except OSError:
+                    rmtree(destination / "files")
+                    raise
+            else:
+                stage.rename(destination)
 
         metadata = update_metadata(games, catalog)
         return record(reports, "install", {
@@ -84,6 +101,42 @@ def install(root, catalog, game_id, game, reports):
             "pegasus": str(metadata),
             "baseline": baseline,
             "trace": trace,
+        })
+
+
+def uninstall(root, catalog, game_id, reports):
+    if not game_id or game_id in {".", ".."} or Path(game_id).name != game_id:
+        raise ValueError("Недопустимый идентификатор игры")
+    root.mkdir(parents=True, exist_ok=True)
+    games = root / "games"
+    destination = games / game_id
+    with (root / "install.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if games.is_symlink() or destination.is_symlink():
+            raise ValueError("Каталог установки не должен быть символической ссылкой")
+        removed = False
+        if destination.exists():
+            if not destination.is_dir():
+                raise ValueError("Путь установки должен быть каталогом")
+            for path in destination.iterdir():
+                if path.name == "saves":
+                    continue
+                if path.is_dir() and not path.is_symlink():
+                    rmtree(path)
+                else:
+                    path.unlink()
+                removed = True
+            if not any(destination.iterdir()):
+                destination.rmdir()
+        metadata = update_metadata(games, catalog)
+        saves = destination / "saves"
+        return record(reports, "uninstall", {
+            "status": "ok",
+            "game": game_id,
+            "removed": removed,
+            "preserved_saves": str(saves) if saves.exists() or saves.is_symlink() else None,
+            "reports": str(reports),
+            "pegasus": str(metadata),
         })
 
 
@@ -139,6 +192,14 @@ def handle(args, catalog, root):
 
     if args.action == "install":
         return install(root, catalog, game_id, game, reports), 0
+    if args.action == "uninstall":
+        return uninstall(root, catalog, game_id, reports), 0
+    if args.action == "report":
+        results = {"game": manifest, "installed": (destination / "gameguard.json").is_file()}
+        for name in ("install", "verify", "sbom", "run", "uninstall"):
+            path = reports / f"{name}.json"
+            results[name] = read_json(path) if path.exists() else {"status": "not_run"}
+        return results, 0
 
     files = installed_game(destination, manifest)
     if args.action == "run":
@@ -153,12 +214,6 @@ def handle(args, catalog, root):
         result = apply_check("static", "make_sbom", files, Path(runner), reports / "sbom.cdx.json")
         return record(reports, "sbom", result), int(result["status"] != "ok")
 
-    results = {"game": manifest}
-    for name in ("install", "verify", "sbom", "run"):
-        path = reports / f"{name}.json"
-        results[name] = read_json(path) if path.exists() else {"status": "not_run"}
-    return results, 0
-
 
 def main():
     # Internal entry point for the optional installation tracer.
@@ -170,15 +225,27 @@ def main():
             print(error, file=sys.stderr)
             return 1
 
-    parser = argparse.ArgumentParser(prog="gameguard")
-    commands = parser.add_subparsers(dest="action", required=True)
-    commands.add_parser("catalog", help="показать доступные игры")
-    for action in ("install", "verify", "sbom", "report"):
-        commands.add_parser(action).add_argument("game")
-    run = commands.add_parser("run", help="запустить установленную игру")
+    parser = argparse.ArgumentParser(
+        prog="gameguard",
+        description="Установка, проверка, запуск и удаление игр GameGuard.",
+        epilog="Пример: gameguard uninstall beneath-a-steel-sky. Справка команды: gameguard КОМАНДА --help.",
+    )
+    commands = parser.add_subparsers(dest="action", required=True, title="команды")
+    commands.add_parser("catalog", help="показать каталог доступных игр", description="Показать каталог доступных игр.")
+    descriptions = {
+        "install": "Установить игру и добавить её в Pegasus. При повторной установке сохранения остаются.",
+        "uninstall": "Удалить игровые файлы и запись Pegasus, сохранив сохранения и отчёты. Перед удалением закройте игру.",
+        "verify": "Сверить игровые файлы с защищённым системным эталоном SHA-256.",
+        "sbom": "Создать перечень компонентов игры в формате CycloneDX JSON.",
+        "report": "Показать сохранённые отчёты, в том числе после удаления игры.",
+    }
+    for action, description in descriptions.items():
+        command = commands.add_parser(action, help=description, description=description)
+        command.add_argument("game", metavar="ИГРА", help="идентификатор из gameguard catalog")
+    run = commands.add_parser("run", help="проверить и запустить установленную игру", description="Проверить ресурсы и запустить игру через GameGuard.")
     selection = run.add_mutually_exclusive_group(required=True)
-    selection.add_argument("game", nargs="?")
-    selection.add_argument("--manifest", type=Path)
+    selection.add_argument("game", nargs="?", metavar="ИГРА", help="идентификатор из gameguard catalog")
+    selection.add_argument("--manifest", type=Path, metavar="ПУТЬ", help="путь к gameguard.json установленной игры")
 
     args = parser.parse_args()
     os.umask(0o077)

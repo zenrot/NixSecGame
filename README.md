@@ -58,6 +58,16 @@ pegasus-fe
 
 Для запуска из терминала выполните `gameguard run beneath-a-steel-sky`. Для просмотра записей установки и последнего запуска выполните `gameguard report beneath-a-steel-sky`. Журналы CLI хранятся в `~/.local/share/gameguard/reports/<id>/`. Установка использует каталог и список разрешённых загрузок из `repository/`.
 
+Для удаления закройте игру и выполните:
+
+```sh
+gameguard uninstall beneath-a-steel-sky
+```
+
+Команда удаляет игровые ресурсы, манифест установки и запись коллекции Pegasus. Сохранения остаются в `~/.local/share/gameguard/games/<id>/saves`, отчёты остаются в `~/.local/share/gameguard/reports/<id>/`. Повторная установка использует сохранения в том же каталоге. После удаления перезапустите Pegasus для чтения обновлённых метаданных. Команда `gameguard report <id>` доступна и для удалённой игры; поле `installed` показывает наличие установки, а `uninstall` содержит результат удаления. Повторное удаление отсутствующей игры возвращает `removed: false`.
+
+Список команд: `gameguard --help`. Подробная справка удаления: `gameguard uninstall --help`.
+
 ## Разработка
 
 Запустите `nix develop` на ARM64 и выполните `python3 -m unittest discover -s tests`. Команда `nix build` собирает пакет GameGuard и запускает эти тесты.
