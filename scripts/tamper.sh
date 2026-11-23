@@ -14,7 +14,7 @@ case ${1:-} in
     echo "Добавлено ${#mark} байт в $file"
     ;;
   clean)
-    while [ "$(tail -c ${#mark} "$file")" = "$mark" ]; do
+    while cmp -s <(tail -c ${#mark} "$file") <(printf %s "$mark"); do
       truncate -s -${#mark} "$file"
     done
     echo "Файл $file очищен"
